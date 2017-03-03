@@ -162,8 +162,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			appkey       string
 			apistat      *ApiStat
 		)
-		appkey = c.Request.Form.Get("app_key")
-		method := c.Request.Form.Get("api_method")
+		appkey = c.PostForm("app_key")
+		method := c.PostForm("api_method")
 		//	node_id := c.Query("node_id") //店铺
 		//TODO from_node_id h
 		//判断是否有调用权限
@@ -189,7 +189,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			//如果没有，则主动查找授权信息
 			if auth_message == nil {
-				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.Request.Form.Get("type"))
+				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"))
 				if err != nil {
 					c.JSON(200, lib.Errors["101"])
 					return
@@ -197,6 +197,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				if auth_message == nil {
 					T.Debug("load shop info failed,node_id:%s,type:%s", apistat.NodeID, c.Request.Form.Get("type"))
 					c.JSON(200, lib.Errors["101"])
+					return
 				}
 			}
 			//验签，代理
@@ -348,23 +349,39 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string) (auth interface{},
 	param.Add("method", "matrix.get.pollinfo2")
 	param.Add("params", string(mb))
 
-	auth, err = lib.Request(h.BackendURL, "POST", param.Encode())
+	b, err := lib.Request(h.BackendURL, "POST", param.Encode())
 	if err != nil {
 		return nil, err
 	}
+
+	var shops []interface{}
+	err = json.Unmarshal(b, &shops)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(shops) != 1 {
+		T.Error("shopinfo not right,len :%s,result:%s", len(shops), string(b))
+		return
+	}
+
+	a := shops[0].(map[string]interface{})
 
 	h.rwmutex.Lock()
-	h.ShopInfo[node_id] = auth
+	h.ShopInfo[node_id] = a
 	h.rwmutex.Unlock()
 
-	str, err := json.Marshal(auth)
+	str, err := json.Marshal(a)
 	if err != nil {
 		return nil, err
 	}
 
-	sql := fmt.Sprintf("insert t_app_shop(fd_node_id,fd_shop_info,fd_create_time) values('%s','%s','%s') on duplicate key update fd_shop_info='%s'", node_id, str, time.Now().Format("2006-01-02 15:04:05"), str)
+	sql := fmt.Sprintf("insert into t_app_shop(fd_node_id,fd_shop_info,fd_create_time) values('%s','%s','%s') on duplicate key update fd_shop_info='%s'", node_id, str, time.Now().Format("2006-01-02 15:04:05"), str)
 	_, err = h.db.Exec(sql)
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
 //添加调用信息
