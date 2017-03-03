@@ -162,8 +162,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			appkey       string
 			apistat      *ApiStat
 		)
-		appkey = c.Query("app_key")
-		method := c.Query("api_method")
+		appkey = c.Request.Form.Get("app_key")
+		method := c.Request.Form.Get("api_method")
 		//	node_id := c.Query("node_id") //店铺
 		//TODO from_node_id h
 		//判断是否有调用权限
@@ -184,16 +184,19 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		if ok {
 			var b []byte
 			if auth_message, ok = h.ShopInfo[apistat.NodeID]; !ok {
-				c.JSON(200, lib.Errors["002"])
-				return
+				T.Debug("can't find shopinfo ,nodeid :%s", apistat.NodeID)
 			}
 
 			//如果没有，则主动查找授权信息
 			if auth_message == nil {
-				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.Query("type"))
+				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.Request.Form.Get("type"))
 				if err != nil {
 					c.JSON(200, lib.Errors["101"])
 					return
+				}
+				if auth_message == nil {
+					T.Debug("load shop info failed,node_id:%s,type:%s", apistat.NodeID, c.Request.Form.Get("type"))
+					c.JSON(200, lib.Errors["101"])
 				}
 			}
 			//验签，代理
