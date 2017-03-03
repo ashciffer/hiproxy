@@ -164,7 +164,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		)
 		appkey = c.PostForm("app_key")
 		method := c.PostForm("api_method")
-		node_id := c.Query("node_id") //店铺
+		node_id := c.PostForm("node_id") //店铺
 		//TODO from_node_id h
 		//判断是否有调用权限
 		if apistat, ok = h.AppInfo[appkey]; !ok {
@@ -348,7 +348,7 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id strin
 	param := url.Values{}
 	param.Add("method", "matrix.get.pollinfo2")
 	param.Add("params", string(mb))
-	T.Debug("params :", string(mb))
+	T.Debug("params :%s", string(mb))
 	b, err := lib.Request(h.BackendURL, "POST", param.Encode())
 	if err != nil {
 		return nil, err
