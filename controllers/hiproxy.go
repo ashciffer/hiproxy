@@ -189,7 +189,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			//如果没有，则主动查找授权信息
 			if auth_message == nil {
-				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"))
+				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), appkey)
 				if err != nil {
 					c.JSON(200, lib.Errors["101"])
 					return
@@ -231,7 +231,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				json.Unmarshal(b, &res)
 				if _, ok := res["error_response"]; ok {
 					T.Error("platfrom return error resopnse ,error :%s", string(b))
-					h.QueryNodeAuthMessage(apistat.NodeID, platform_type)
+					h.QueryNodeAuthMessage(apistat.NodeID, platform_type, appkey)
 				} else {
 					T.Info("proxy success，result:%s", string(b))
 				}
@@ -339,8 +339,8 @@ func (h *HiProxy) QueryShopexInfo(nodeid string) (*list.List, error) {
 }
 
 //从服务后台获取店铺授权信息
-func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string) (auth interface{}, err error) {
-	m := bson.M{"from_type": _type, "status": "true", "from_node_id": node_id}
+func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, appkey string) (auth interface{}, err error) {
+	m := bson.M{"to_node_id": appkey, "status": "true", "from_node_id": node_id}
 	mb, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
