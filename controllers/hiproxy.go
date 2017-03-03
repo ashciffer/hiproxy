@@ -164,7 +164,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		)
 		appkey = c.PostForm("app_key")
 		method := c.PostForm("api_method")
-		//	node_id := c.Query("node_id") //店铺
+		node_id := c.Query("node_id") //店铺
 		//TODO from_node_id h
 		//判断是否有调用权限
 		if apistat, ok = h.AppInfo[appkey]; !ok {
@@ -189,7 +189,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			//如果没有，则主动查找授权信息
 			if auth_message == nil {
-				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), appkey)
+				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), node_id)
 				if err != nil {
 					c.JSON(200, lib.Errors["101"])
 					return
@@ -231,7 +231,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				json.Unmarshal(b, &res)
 				if _, ok := res["error_response"]; ok {
 					T.Error("platfrom return error resopnse ,error :%s", string(b))
-					h.QueryNodeAuthMessage(apistat.NodeID, platform_type, appkey)
+					h.QueryNodeAuthMessage(apistat.NodeID, platform_type, node_id)
 				} else {
 					T.Info("proxy success，result:%s", string(b))
 				}
@@ -339,8 +339,8 @@ func (h *HiProxy) QueryShopexInfo(nodeid string) (*list.List, error) {
 }
 
 //从服务后台获取店铺授权信息
-func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, appkey string) (auth interface{}, err error) {
-	m := bson.M{"to_node_id": appkey, "status": "true", "from_node_id": node_id}
+func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id string) (auth interface{}, err error) {
+	m := bson.M{"to_node_id": node_id, "status": "true", "from_node_id": from_node_id}
 	mb, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -348,7 +348,7 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, appkey string) (au
 	param := url.Values{}
 	param.Add("method", "matrix.get.pollinfo2")
 	param.Add("params", string(mb))
-
+	T.Debug("params :", string(mb))
 	b, err := lib.Request(h.BackendURL, "POST", param.Encode())
 	if err != nil {
 		return nil, err
@@ -361,7 +361,7 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, appkey string) (au
 	}
 
 	if len(shops) != 1 {
-		T.Error("shopinfo not right,len :%s,result:%s", len(shops), string(b))
+		T.Error("shopinfo not right,len :%d,result:%s", len(shops), string(b))
 		return
 	}
 
