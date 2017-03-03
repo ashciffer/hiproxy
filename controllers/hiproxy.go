@@ -15,11 +15,6 @@ import (
 
 	"time"
 
-	"io/ioutil"
-	"strings"
-
-	"strconv"
-
 	"git.ishopex.cn/teegon/hiproxy/lib"
 	"git.ishopex.cn/teegon/hiproxy/midwares"
 	. "git.ishopex.cn/teegon/hiproxy/models"
@@ -217,19 +212,20 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			u.Add("secret", auth_secret)
 			//u.Add("token", auth_message.(map[string]interface{})["from_token"].(string))
 			pu := auth_message.(map[string]interface{})["to_api_url"].(string)
-			puu, err := url.Parse(pu)
-			if err != nil {
-				c.Writer.Write([]byte(err.Error()))
-				return
-			}
+			// puu, err := url.Parse(pu)
+			// if err != nil {
+			// 	c.Writer.Write([]byte(err.Error()))
+			// 	return
+			// }
 			h.AddPlatformParams(&u, platform_type, method, appkey)
 
 			u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret))
 
 			//puu.RawQuery = u.Encode()
-			c.Request.Header.Set("Content-Length", strconv.Itoa(len(u.Encode())))
-			c.Request.Body = ioutil.NopCloser(strings.NewReader(u.Encode()))
-			b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
+			// c.Request.Header.Set("Content-Length", strconv.Itoa(len(u.Encode())))
+			// c.Request.Body = ioutil.NopCloser(strings.NewReader(u.Encode()))
+			b, err = lib.Request(pu, "POST", u.Encode())
+			//	b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
 			if err != nil {
 				T.Error("proxy failed,error:%s", err)
 				c.JSON(200, lib.Errors.Get("500", err))
