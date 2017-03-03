@@ -281,7 +281,7 @@ func (h *HiProxy) QueryAppInfo(appkey string) (*list.List, error) {
 		}
 		err = json.Unmarshal([]byte(ss), &s.Apis)
 		if err != nil {
-			T.Error("full in result failed,error:%s，result,%s", ss)
+			T.Error("full in result failed,error:%s，result,%s", err, ss)
 			return nil, err
 		}
 		all_info.PushBack(s)
