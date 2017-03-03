@@ -219,6 +219,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			//puu.RawQuery = u.Encode()
 			// c.Request.Header.Set("Content-Length", strconv.Itoa(len(u.Encode())))
 			// c.Request.Body = ioutil.NopCloser(strings.NewReader(u.Encode()))
+			T.Debug("params :%s", u.Encode())
 			b, err = lib.Request(pu, "POST", u.Encode())
 			//	b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
 			if err != nil {
