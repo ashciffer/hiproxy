@@ -177,6 +177,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		//读取授权信息
 		if ok {
 			var b []byte
+			var sys map[string]string
 			if auth_message, ok = h.ShopInfo[apistat.NodeID]; !ok {
 				T.Debug("can't find shopinfo ,nodeid :%s", apistat.NodeID)
 			}
@@ -201,11 +202,27 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			//添加系统参数
 			u.Del("app_key")
+			u.Del("sign")
+			u.Del("method")
+			u.Del("api_method")
+
+			params := c.PostForm("params")
+			err = json.Unmarshal([]byte(params), &sys)
+			if err != nil {
+				c.JSON(200, err)
+				return
+			}
+
+			for k, v := range sys {
+				u.Add(k, v)
+			}
+
+			u.Del("params")
 			//u.Add("app_key", auth_message.(map[string]interface{})["from_api_key"].(string))
 			auth_secret := auth_message.(map[string]interface{})["from_api_secret"].(string)
 			u.Add("secret", auth_secret)
-			//u.Add("token", auth_message.(map[string]interface{})["from_token"].(string))
-			pu := auth_message.(map[string]interface{})["to_api_url"].(string)
+			u.Add("session", auth_message.(map[string]interface{})["from_auth_code"].(string))
+			pu := auth_message.(map[string]interface{})["from_api_url"].(string)
 			// puu, err := url.Parse(pu)
 			// if err != nil {
 			// 	c.Writer.Write([]byte(err.Error()))
@@ -232,8 +249,10 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 					T.Error("platfrom return error resopnse ,error :%s", string(b))
 					h.QueryNodeAuthMessage(apistat.NodeID, platform_type, node_id)
 				} else {
+					//c.JSON(200, obj interface{})
 					T.Info("proxy success，result:%s", string(b))
 				}
+				c.JSON(200, string(b))
 			}
 		} else {
 			c.JSON(400, lib.Errors["100"])

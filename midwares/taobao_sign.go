@@ -44,7 +44,7 @@ func CheckSign(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func TaoBaoSign(form *url.Values, secret string) string {
-	signstr := secret + Sortedstr(form, "", "", "sign") + secret
+	signstr := secret + Sortedstr(form, "", "", "sign")
 	h := md5.New()
 	io.WriteString(h, signstr)
 	return fmt.Sprintf("%032X", h.Sum(nil))
