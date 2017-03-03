@@ -168,6 +168,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		//TODO from_node_id h
 		//判断是否有调用权限
 		if apistat, ok = h.AppInfo[appkey]; !ok {
+			T.Error("appinfo :%v", h.AppInfo)
+			T.Debug("apistat :%s", appkey)
 			c.JSON(200, lib.Errors["002"])
 			return
 		}
