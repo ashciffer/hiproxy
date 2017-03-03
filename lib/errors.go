@@ -45,4 +45,5 @@ func init() {
 	Errors.Add(&Error{"002", "the lack of params", "please check your params"})
 	Errors.Add(&Error{"100", "access denied, app can not call the api", "please check your authority"})
 	Errors.Add(&Error{"101", "can't get authority", "please check your authority"})
+	Errors.Add(&Error{"500", "Network anomalies", ""})
 }

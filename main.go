@@ -28,14 +28,16 @@ func CustomLog() gin.HandlerFunc {
 		end := time.Now()
 		latency := end.Sub(start)
 
+		params := c.Request.Form.Encode()
 		clientIP := c.ClientIP()
 		method := c.Request.Method
 		statusCode := c.Writer.Status()
 		comment := c.Errors.String()
 
-		T.Info("[HiProxy] %v | %3d  | %13v | %s | %-7s %s\n%s",
+		T.Info("[HiProxy] %v | %3d | %s | %13v | %s | %-7s %s\n%s",
 			end.Format("2006/01/02 - 15:04:05"),
 			statusCode,
+			params,
 			latency,
 			clientIP,
 			method,
@@ -51,6 +53,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	backendurl := beego.AppConfig.String("app::backendurl")
+	hp.TeegonSecret = beego.AppConfig.String("app::secret")
 	dns := beego.AppConfig.String("app::dns")
 	err := hp.Init(backendurl, dns)
 	if err != nil {

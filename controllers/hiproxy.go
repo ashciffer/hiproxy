@@ -23,11 +23,12 @@ import (
 )
 
 type HiProxy struct {
-	BackendURL string
-	AppInfo    map[string]*ApiStat
-	ShopInfo   map[string]interface{}
-	rwmutex    sync.RWMutex //锁
-	db         *sql.DB
+	TeegonSecret string
+	BackendURL   string
+	AppInfo      map[string]*ApiStat
+	ShopInfo     map[string]interface{}
+	rwmutex      sync.RWMutex //锁
+	db           *sql.DB
 }
 
 type ApiStat struct {
@@ -161,11 +162,13 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			appkey       string
 			apistat      *ApiStat
 		)
-		appkey = c.Query("appkey")
-		method := c.Query("method")
+		appkey = c.Query("app_key")
+		method := c.Query("api_method")
+		//	node_id := c.Query("node_id") //店铺
+		//TODO from_node_id h
 		//判断是否有调用权限
 		if apistat, ok = h.AppInfo[appkey]; !ok {
-			c.JSON(400, lib.Errors["002"])
+			c.JSON(200, lib.Errors["002"])
 			return
 		}
 
@@ -179,7 +182,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		if ok {
 			var b []byte
 			if auth_message, ok = h.ShopInfo[apistat.NodeID]; !ok {
-				c.JSON(400, lib.Errors["002"])
+				c.JSON(200, lib.Errors["002"])
 				return
 			}
 
@@ -187,32 +190,45 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			if auth_message == nil {
 				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.Query("type"))
 				if err != nil {
-					c.JSON(400, lib.Errors["101"])
+					c.JSON(200, lib.Errors["101"])
 					return
 				}
 			}
 			//验签，代理
 
 			u := c.Request.Form
+			platform_type := auth_message.(map[string]interface{})["from_type"].(string)
+
+			//添加系统参数
+
 			u.Add("key", auth_message.(map[string]interface{})["from_api_key"].(string))
-			u.Add("secret", auth_message.(map[string]interface{})["from_api_secret"].(string))
-			u.Add("token", auth_message.(map[string]interface{})["from_token"].(string))
+			auth_secret := auth_message.(map[string]interface{})["from_api_secret"].(string)
+			u.Add("secret", auth_secret)
+			//u.Add("token", auth_message.(map[string]interface{})["from_token"].(string))
 			pu := auth_message.(map[string]interface{})["to_api_url"].(string)
 			puu, err := url.Parse(pu)
 			if err != nil {
 				c.Writer.Write([]byte(err.Error()))
 				return
 			}
-			sign := midwares.Sign(&u, u.Get("secret"))
-			u.Add("sign", sign)
+			h.AddPlatformParams(&u, platform_type, method, appkey)
+
+			u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret))
+
 			puu.RawQuery = u.Encode()
 			b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
 			if err != nil {
 				T.Error("proxy failed,error:%s", err)
-				h.QueryNodeAuthMessage(apistat.NodeID, c.Query("type"))
+				c.JSON(200, lib.Errors.Get("500", err))
 			} else {
-				T.Error("responese:", string(b))
-				T.Error("status :", c.Writer.Status())
+				var res map[string]interface{}
+				json.Unmarshal(b, &res)
+				if _, ok := res["error_response"]; ok {
+					T.Error("platfrom return error resopnse ,error :%s", string(b))
+					h.QueryNodeAuthMessage(apistat.NodeID, platform_type)
+				} else {
+					T.Info("proxy success，result:%s", string(b))
+				}
 			}
 		} else {
 			c.JSON(400, lib.Errors["100"])
@@ -341,7 +357,7 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string) (auth interface{},
 		return nil, err
 	}
 
-	sql := fmt.Sprintf("insert t_app_shop(fd_node_id,fd_shop_info,fd_create_time) values('%s','%s','%s')", node_id, str, time.Now().Format("2006-01-02 15:04:05"))
+	sql := fmt.Sprintf("insert t_app_shop(fd_node_id,fd_shop_info,fd_create_time) values('%s','%s','%s') on duplicate key update fd_shop_info='%s'", node_id, str, time.Now().Format("2006-01-02 15:04:05"), str)
 	_, err = h.db.Exec(sql)
 	return nil, err
 }
@@ -373,6 +389,14 @@ func (h *HiProxy) AddAppInfo(c *gin.Context) {
 	} else {
 		c.Writer.Write([]byte("success"))
 	}
+}
+
+func (h *HiProxy) AddPlatformParams(u *url.Values, platform_type, method, appkey string) {
+	switch platform_type {
+	case "taobao":
+		midwares.AddTaobaoSystemParams(u, method, appkey)
+	}
+
 }
 
 func toTarget(target *url.URL) func(*http.Request) {

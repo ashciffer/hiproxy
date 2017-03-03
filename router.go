@@ -14,8 +14,6 @@ func router(c *gin.Engine) {
 	}
 	//
 
-	c.GET("/logs", controllers.GetFile)
-
 	na := c.Group("/node_authorization")
 	{
 		naRoutes := &controllers.HiProxy{}
@@ -23,5 +21,4 @@ func router(c *gin.Engine) {
 	}
 
 	c.GET("/hiproxy", hp.ReverseFromT2P())
-	c.GET("/test", hp.TestProxy())
 }

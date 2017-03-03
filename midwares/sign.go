@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+const (
+	TAOBAO = "taobao"
+)
+
 func Sortedstr(sets *url.Values, sep1 string, sep2 string, skip string) string {
 	mk := make([]string, len(*sets))
 	i := 0
@@ -29,9 +33,17 @@ func Sortedstr(sets *url.Values, sep1 string, sep2 string, skip string) string {
 }
 
 func query(r *http.Request, key string) string {
-
 	if values, ok := r.URL.Query()[key]; ok && len(values) > 0 {
 		return values[0]
+	}
+	return ""
+}
+
+//生成Sign
+func CreateSign(p *url.Values, _type, secret string) string {
+	switch _type {
+	case TAOBAO:
+		return TaoBaoSign(p, secret)
 	}
 	return ""
 }
