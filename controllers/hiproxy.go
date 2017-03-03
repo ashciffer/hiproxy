@@ -15,6 +15,7 @@ import (
 
 	"time"
 
+	"io/ioutil"
 	"strings"
 
 	"git.ishopex.cn/teegon/hiproxy/lib"
@@ -224,7 +225,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret))
 
 			//puu.RawQuery = u.Encode()
-			c.Request.Body = strings.NewReader(u.Encode())
+			c.Request.Body = ioutil.NopCloser(strings.NewReader(u.Encode()))
 			b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
 			if err != nil {
 				T.Error("proxy failed,error:%s", err)
