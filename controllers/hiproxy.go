@@ -73,16 +73,16 @@ func (h *HiProxy) LoadAppInfo() error {
 		return err
 	}
 
-	for e := l.Front(); e != nil; e = e.Next() {
-		var t ApiStat
-		err := json.Unmarshal([]byte(e.Value.(string)), &t)
-		if err != nil {
-			T.Warn("load AppInfo failed,err:%s,appinfo :%s", err, e.Value)
-			continue
+	defer func() {
+		if err := recover(); err != nil {
+			T.Error("LoadAppInfo failed,error :%s", err)
 		}
+	}()
 
+	for e := l.Front(); e != nil; e = e.Next() {
 		h.rwmutex.Lock()
-		h.AppInfo[t.Appkey] = &t
+		as := e.Value.(ApiStat)
+		h.AppInfo[as.Appkey] = &as
 		h.rwmutex.Unlock()
 	}
 	return nil
