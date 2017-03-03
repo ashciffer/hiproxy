@@ -96,13 +96,7 @@ func (h *HiProxy) LoadShopInfo() error {
 	}
 
 	for e := l.Front(); e != nil; e = e.Next() {
-		var t map[string]interface{}
-		err := json.Unmarshal([]byte(e.Value.(string)), &t)
-		if err != nil {
-			T.Warn("load ShopInfo failed,err:%s,appinfo :%s", err, e.Value)
-			continue
-		}
-
+		t := e.Value.(map[string]interface{})
 		h.rwmutex.Lock()
 		h.ShopInfo[t["from_node_id"].(string)] = &t
 		h.rwmutex.Unlock()
@@ -206,8 +200,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			platform_type := auth_message.(map[string]interface{})["from_type"].(string)
 
 			//添加系统参数
-
-			u.Add("key", auth_message.(map[string]interface{})["from_api_key"].(string))
+			u.Del("app_key")
+			//u.Add("app_key", auth_message.(map[string]interface{})["from_api_key"].(string))
 			auth_secret := auth_message.(map[string]interface{})["from_api_secret"].(string)
 			u.Add("secret", auth_secret)
 			//u.Add("token", auth_message.(map[string]interface{})["from_token"].(string))
@@ -217,7 +211,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			// 	c.Writer.Write([]byte(err.Error()))
 			// 	return
 			// }
-			h.AddPlatformParams(&u, platform_type, method, appkey)
+
+			h.AddPlatformParams(&u, platform_type, method, auth_message.(map[string]interface{})["from_api_key"].(string))
 
 			u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret))
 
