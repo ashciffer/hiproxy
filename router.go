@@ -20,6 +20,6 @@ func router(c *gin.Engine) {
 		na.POST("add/", naRoutes.ReloadShopInfo)
 	}
 
-	c.GET("/hiproxy", hp.ReverseFromT2P())
+	// c.GET("/hiproxy", hp.ReverseFromT2P())
 	c.POST("/hiproxy", hp.ReverseFromT2P())
 }

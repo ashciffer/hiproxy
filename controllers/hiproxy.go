@@ -15,6 +15,8 @@ import (
 
 	"time"
 
+	"strings"
+
 	"git.ishopex.cn/teegon/hiproxy/lib"
 	"git.ishopex.cn/teegon/hiproxy/midwares"
 	. "git.ishopex.cn/teegon/hiproxy/models"
@@ -221,7 +223,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret))
 
-			puu.RawQuery = u.Encode()
+			//puu.RawQuery = u.Encode()
+			c.Request.Body = strings.NewReader(u.Encode())
 			b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
 			if err != nil {
 				T.Error("proxy failed,error:%s", err)
@@ -360,7 +363,7 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id strin
 		return nil, err
 	}
 
-	if len(shops) != 1 {
+	if len(shops) < 1 {
 		T.Error("shopinfo not right,len :%d,result:%s", len(shops), string(b))
 		return
 	}
