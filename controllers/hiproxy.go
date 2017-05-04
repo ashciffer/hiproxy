@@ -151,9 +151,9 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var (
 			auth_message interface{}
-			ok           bool
-			err          error
-			appkey       string
+			ok bool
+			err error
+			appkey string
 			apistat      *ApiStat
 		)
 		appkey = c.PostForm("app_key")
@@ -173,11 +173,11 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				ok = true
 			}
 		}
-
 		//读取授权信息
 		if ok {
 			var b []byte
 			var sys map[string]string
+
 			if auth_message, ok = h.ShopInfo[apistat.NodeID]; !ok {
 				T.Debug("can't find shopinfo ,nodeid :%s", apistat.NodeID)
 			}
@@ -185,6 +185,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			//如果没有，则主动查找授权信息
 			if auth_message == nil {
 				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), node_id)
+
 				if err != nil {
 					c.JSON(200, lib.Errors["101"])
 					return
@@ -195,8 +196,8 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 					return
 				}
 			}
-			//验签，代理
 
+			//验签，代理
 			u := c.Request.Form
 			platform_type := auth_message.(map[string]interface{})["from_type"].(string)
 
@@ -206,7 +207,10 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			u.Del("method")
 			u.Del("api_method")
 
+			T.Info("s1-------:%s", u)
+
 			params := c.PostForm("params")
+
 			err = json.Unmarshal([]byte(params), &sys)
 			if err != nil {
 				c.JSON(200, err)
@@ -228,15 +232,19 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			// 	c.Writer.Write([]byte(err.Error()))
 			// 	return
 			// }
+			h.AddPlatformParams(&u, platform_type, method, auth_message.(map[string]interface{})["from_api_key"].(string), auth_message)
 
-			h.AddPlatformParams(&u, platform_type, method, auth_message.(map[string]interface{})["from_api_key"].(string))
-
-			u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret))
+			if platform_type == "taobao" {
+				u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret, auth_message))
+			}else {
+				u.Add("_aop_signature", midwares.CreateSign(&u, platform_type, auth_secret, auth_message))
+				pu += "/param2/1/com.alibaba.product/alibaba.product.getList/1004526"
+			}
 
 			//puu.RawQuery = u.Encode()
 			// c.Request.Header.Set("Content-Length", strconv.Itoa(len(u.Encode())))
 			// c.Request.Body = ioutil.NopCloser(strings.NewReader(u.Encode()))
-			T.Debug("params :%s", u.Encode())
+			T.Debug("url %s \t params :%s", pu, u.Encode())
 			b, err = lib.Request(pu, "POST", u.Encode())
 			//	b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
 			if err != nil {
@@ -366,7 +374,6 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id strin
 	param := url.Values{}
 	param.Add("method", "matrix.get.pollinfo2")
 	param.Add("params", string(mb))
-	T.Debug("params :%s", string(mb))
 	b, err := lib.Request(h.BackendURL, "POST", param.Encode())
 	if err != nil {
 		return nil, err
@@ -399,6 +406,7 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id strin
 	if err != nil {
 		return nil, err
 	}
+
 	return a, nil
 }
 
@@ -431,13 +439,15 @@ func (h *HiProxy) AddAppInfo(c *gin.Context) {
 	}
 }
 
-func (h *HiProxy) AddPlatformParams(u *url.Values, platform_type, method, appkey string) {
+func (h *HiProxy) AddPlatformParams(u *url.Values, platform_type, method, appkey string, auth_message interface{}) {
 	switch platform_type {
 	case "taobao":
 		midwares.AddTaobaoSystemParams(u, method, appkey)
+	case "alibaba":
+		midwares.AddAlibabaSystemParams(u, method, auth_message)
 	}
-
 }
+
 
 func toTarget(target *url.URL) func(*http.Request) {
 	return func(req *http.Request) {

@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
 	"time"
-
 	"net/url"
-
 	"git.ishopex.cn/teegon/hiproxy/lib"
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +30,7 @@ func CheckSign(w http.ResponseWriter, r *http.Request) bool {
 		w.Write([]byte(lib.Errors["001"].String()))
 		return false
 	}
-	if time.Now().Sub(ts) > time.Duration(60)*time.Second {
+	if time.Now().Sub(ts) > time.Duration(60) * time.Second {
 		w.Write([]byte(lib.Errors.Get("001", "timeout").String()))
 		return false
 	}

@@ -9,6 +9,7 @@ import (
 
 const (
 	TAOBAO = "taobao"
+	ALIBABA = "alibaba"
 )
 
 func Sortedstr(sets *url.Values, sep1 string, sep2 string, skip string) string {
@@ -25,7 +26,7 @@ func Sortedstr(sets *url.Values, sep1 string, sep2 string, skip string) string {
 	for _, k := range mk {
 		if k != skip {
 			for _, v := range (*sets)[k] {
-				s = append(s, k+sep2+v)
+				s = append(s, k + sep2 + v)
 			}
 		}
 	}
@@ -40,10 +41,12 @@ func query(r *http.Request, key string) string {
 }
 
 //生成Sign
-func CreateSign(p *url.Values, _type, secret string) string {
+func CreateSign(p *url.Values, _type, secret string, auth_message interface{}) string {
 	switch _type {
 	case TAOBAO:
 		return TaoBaoSign(p, secret)
+	case ALIBABA:
+		return AlibabaSign(p, secret, auth_message)
 	}
 	return ""
 }
