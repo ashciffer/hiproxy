@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	TAOBAO = "taobao"
+	TAOBAO  = "taobao"
 	ALIBABA = "alibaba"
 )
 
@@ -26,7 +26,7 @@ func Sortedstr(sets *url.Values, sep1 string, sep2 string, skip string) string {
 	for _, k := range mk {
 		if k != skip {
 			for _, v := range (*sets)[k] {
-				s = append(s, k + sep2 + v)
+				s = append(s, k+sep2+v)
 			}
 		}
 	}

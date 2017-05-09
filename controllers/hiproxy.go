@@ -13,8 +13,6 @@ import (
 
 	"container/list"
 
-	"time"
-
 	"git.ishopex.cn/teegon/hiproxy/lib"
 	"git.ishopex.cn/teegon/hiproxy/midwares"
 	. "git.ishopex.cn/teegon/hiproxy/models"
@@ -60,9 +58,9 @@ func (h *HiProxy) Init(backendurl, dns string) error {
 		return err
 	}
 
-	if err = h.LoadShopInfo(); err != nil {
-		return err
-	}
+	// if err = h.LoadShopInfo(); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -151,9 +149,9 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var (
 			auth_message interface{}
-			ok bool
-			err error
-			appkey string
+			ok           bool
+			err          error
+			appkey       string
 			apistat      *ApiStat
 		)
 		appkey = c.PostForm("app_key")
@@ -178,26 +176,20 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			var b []byte
 			var sys map[string]string
 
-			if auth_message, ok = h.ShopInfo[apistat.NodeID]; !ok {
-				T.Debug("can't find shopinfo ,nodeid :%s", apistat.NodeID)
+			auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), node_id)
+
+			if err != nil {
+				c.JSON(200, lib.Errors["101"])
+				return
 			}
-
-			//如果没有，则主动查找授权信息
 			if auth_message == nil {
-				auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), node_id)
-
-				if err != nil {
-					c.JSON(200, lib.Errors["101"])
-					return
-				}
-				if auth_message == nil {
-					T.Debug("load shop info failed,node_id:%s,type:%s", apistat.NodeID, c.Request.Form.Get("type"))
-					c.JSON(200, lib.Errors["101"])
-					return
-				}
+				T.Debug("load shop info failed,node_id:%s,type:%s", apistat.NodeID, c.Request.Form.Get("type"))
+				c.JSON(200, lib.Errors["101"])
+				return
 			}
 
 			//验签，代理
+			//TODO 验证签名方法
 			u := c.Request.Form
 			platform_type := auth_message.(map[string]interface{})["from_type"].(string)
 
@@ -207,13 +199,13 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			u.Del("method")
 			u.Del("api_method")
 
-			T.Info("s1-------:%s", u)
+			// T.Info("s1-------:%s", u)
 
 			params := c.PostForm("params")
 
 			err = json.Unmarshal([]byte(params), &sys)
 			if err != nil {
-				c.JSON(200, err)
+				c.JSON(400, err)
 				return
 			}
 
@@ -236,7 +228,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			if platform_type == "taobao" {
 				u.Add("sign", midwares.CreateSign(&u, platform_type, auth_secret, auth_message))
-			}else {
+			} else {
 				u.Add("_aop_signature", midwares.CreateSign(&u, platform_type, auth_secret, auth_message))
 				pu += "/param2/1/com.alibaba.product/alibaba.product.getList/1004526"
 			}
@@ -251,15 +243,15 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				T.Error("proxy failed,error:%s", err)
 				c.JSON(200, lib.Errors.Get("500", err))
 			} else {
-				var res map[string]interface{}
-				json.Unmarshal(b, &res)
-				if _, ok := res["error_response"]; ok {
-					T.Error("platfrom return error resopnse ,error :%s", string(b))
-					h.QueryNodeAuthMessage(apistat.NodeID, platform_type, node_id)
-				} else {
-					//c.JSON(200, obj interface{})
-					T.Info("proxy success，result:%s", string(b))
-				}
+				// var res map[string]interface{}
+				// json.Unmarshal(b, &res)
+				// if _, ok := res["error_response"]; ok {
+				// T.Error("platfrom return error resopnse ,error :%s", string(b))
+				// h.QueryNodeAuthMessage(apistat.NodeID, platform_type, node_id)
+				// } else {
+				//c.JSON(200, obj interface{})
+				T.Info("proxy success，result:%s", string(b))
+				// }
 				c.JSON(200, string(b))
 			}
 		} else {
@@ -324,7 +316,6 @@ func (h *HiProxy) QueryAppInfo(appkey string) (*list.List, error) {
 
 //查找店铺信息
 func (h *HiProxy) QueryShopexInfo(nodeid string) (*list.List, error) {
-
 	var rows *sql.Rows
 	sql := ""
 	var err error
@@ -392,49 +383,56 @@ func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id strin
 
 	a := shops[0].(map[string]interface{})
 
-	h.rwmutex.Lock()
-	h.ShopInfo[node_id] = a
-	h.rwmutex.Unlock()
+	// h.rwmutex.Lock()
+	// h.ShopInfo[node_id] = a
+	// h.rwmutex.Unlock()
 
-	str, err := json.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
+	// str, err := json.Marshal(a)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	sql := fmt.Sprintf("insert into t_app_shop(fd_node_id,fd_shop_info,fd_create_time) values('%s','%s','%s') on duplicate key update fd_shop_info='%s'", node_id, str, time.Now().Format("2006-01-02 15:04:05"), str)
-	_, err = h.db.Exec(sql)
-	if err != nil {
-		return nil, err
-	}
+	// sql := fmt.Sprintf("insert into t_app_shop(fd_node_id,fd_shop_info,fd_create_time) values('%s','%s','%s') on duplicate key update fd_shop_info='%s'", node_id, str, time.Now().Format("2006-01-02 15:04:05"), str)
+	// _, err = h.db.Exec(sql)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return a, nil
 }
 
 //添加调用信息
 func (h *HiProxy) AddAppInfo(c *gin.Context) {
-	appkey := c.Query("appkey")
-	node_id := c.Query("node_id")
-	t := c.Query("type")
-	status := c.Query("status")
-	info := c.Query("apiinfo")
+	appkey := c.PostForm("appkey")
+	node_id := c.PostForm("node_id")
+	t := c.PostForm("type")
+	info := c.PostForm("apis")
+	T.Debug("%+v", c.Request.Form)
 
-	sql := fmt.Sprintf("insert into t_app_proxy(fd_app_key,fd_node_id,fd_api_type,fd_status,fd_api_info) values('%s','%s','%s','%s','%s')", appkey, node_id, t, status, info)
+	sql := fmt.Sprintf("insert into t_app_proxy(fd_app_key,fd_node_id,fd_api_type,fd_status,fd_api_info) values('%s','%s','%s','%d','%s')", appkey, node_id, t, 1, info)
 
 	_, err := h.db.Exec(sql)
 	if err != nil {
+		c.Writer.Write([]byte(err.Error()))
+	} else {
 		h.rwmutex.Lock()
+		var list []string
+		err := json.Unmarshal([]byte(info), &list)
+		if err != nil {
+			T.Debug("error-%v", err)
+			c.Writer.Write([]byte(err.Error()))
+			return
+		}
 		if api, ok := h.AppInfo[appkey]; ok {
-			api.Apis = append(api.Apis, info)
+			api.Apis = append(api.Apis, list...)
 		} else {
 			h.AppInfo[appkey] = &ApiStat{
 				Appkey: appkey,
 				NodeID: node_id,
-				Apis:   []string{info},
+				Apis:   list,
 			}
 		}
 		h.rwmutex.Unlock()
-		c.Writer.Write([]byte(err.Error()))
-	} else {
 		c.Writer.Write([]byte("success"))
 	}
 }
@@ -447,7 +445,6 @@ func (h *HiProxy) AddPlatformParams(u *url.Values, platform_type, method, appkey
 		midwares.AddAlibabaSystemParams(u, method, auth_message)
 	}
 }
-
 
 func toTarget(target *url.URL) func(*http.Request) {
 	return func(req *http.Request) {

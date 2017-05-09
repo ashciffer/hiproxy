@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 	"net/url"
-	"git.ishopex.cn/teegon/hiproxy/lib"
+	"time"
+
+	"git.ishopex.cn/matrix/kaola/lib"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,22 +24,13 @@ func CheckProxySign() gin.HandlerFunc {
 
 func CheckSign(w http.ResponseWriter, r *http.Request) bool {
 	r.ParseForm()
-	secret := r.PostFormValue("secret")
-	token := r.PostFormValue("token")
-	timestamp := r.PostFormValue("timestamp")
-	ts, err := time.Parse("2006-01-02 15:04:05", timestamp)
-	if err != nil {
-		w.Write([]byte(lib.Errors["001"].String()))
-		return false
-	}
-	if time.Now().Sub(ts) > time.Duration(60) * time.Second {
-		w.Write([]byte(lib.Errors.Get("001", "timeout").String()))
-		return false
-	}
+	token := r.PostFormValue("sign")
 
-	u := r.PostForm
-	u.Del("token")
-	return token == TaoBaoSign(&u, secret)
+	if !(token == TaoBaoSign(&r.PostForm, "")) {
+		w.Write([]byte(lib.Errors.Get("001", "sign error").String()))
+		return false
+	}
+	return true
 }
 
 func TaoBaoSign(form *url.Values, secret string) string {
