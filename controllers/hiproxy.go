@@ -176,14 +176,14 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			var b []byte
 			var sys map[string]string
 
-			auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, c.PostForm("type"), node_id)
+			auth_message, err = h.QueryNodeAuthMessage(apistat.NodeID, node_id)
 
 			if err != nil {
 				c.JSON(200, lib.Errors["101"])
 				return
 			}
 			if auth_message == nil {
-				T.Debug("load shop info failed,node_id:%s,type:%s", apistat.NodeID, c.Request.Form.Get("type"))
+				T.Debug("load shop info failed,node_id:%s", apistat.NodeID)
 				c.JSON(200, lib.Errors["101"])
 				return
 			}
@@ -356,7 +356,7 @@ func (h *HiProxy) QueryShopexInfo(nodeid string) (*list.List, error) {
 }
 
 //从服务后台获取店铺授权信息
-func (h *HiProxy) QueryNodeAuthMessage(node_id, _type string, from_node_id string) (auth interface{}, err error) {
+func (h *HiProxy) QueryNodeAuthMessage(node_id string, from_node_id string) (auth interface{}, err error) {
 	m := bson.M{"to_node_id": node_id, "status": "true", "from_node_id": from_node_id}
 	mb, err := json.Marshal(m)
 	if err != nil {

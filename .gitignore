@@ -5,3 +5,4 @@
 hiproxy2.iml
 logs/*.log
 */log/*-pid
+conf/*
