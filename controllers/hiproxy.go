@@ -205,7 +205,7 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 
 			err = json.Unmarshal([]byte(params), &sys)
 			if err != nil {
-				c.JSON(400, err)
+				c.JSON(400, err.Error())
 				return
 			}
 
@@ -409,7 +409,7 @@ func (h *HiProxy) AddAppInfo(c *gin.Context) {
 	info := c.PostForm("apis")
 	T.Debug("%+v", c.Request.Form)
 
-	sql := fmt.Sprintf("insert into t_app_proxy(fd_app_key,fd_node_id,fd_api_type,fd_status,fd_api_info) values('%s','%s','%s','%d','%s')", appkey, node_id, t, 1, info)
+	sql := fmt.Sprintf("insert into t_app_proxy(fd_app_key,fd_node_id,fd_unique,fd_api_type,fd_status,fd_api_info) values('%s','%s','%s','%s','%d','%s') on duplicate key update fd_app_key= '%s',fd_node_id='%s',fd_api_type='%s',fd_status='%d',fd_api_info='%s'", appkey, node_id, appkey+"_"+node_id, t, 1, info, appkey, node_id, t, 1, info)
 
 	_, err := h.db.Exec(sql)
 	if err != nil {
@@ -424,7 +424,7 @@ func (h *HiProxy) AddAppInfo(c *gin.Context) {
 			return
 		}
 		if api, ok := h.AppInfo[appkey]; ok {
-			api.Apis = append(api.Apis, list...)
+			api.Apis = list
 		} else {
 			h.AppInfo[appkey] = &ApiStat{
 				Appkey: appkey,

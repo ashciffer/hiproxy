@@ -5,12 +5,35 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+
+	"git.ishopex.cn/matrix/kaola/lib"
+	"github.com/gin-gonic/gin"
 )
 
 const (
 	TAOBAO  = "taobao"
 	ALIBABA = "alibaba"
 )
+
+func CheckProxySign() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !CheckSign(c.Writer, c.Request) {
+			c.Abort()
+			return
+		}
+	}
+}
+
+func CheckSign(w http.ResponseWriter, r *http.Request) bool {
+	r.ParseForm()
+	token := r.PostFormValue("sign")
+	secret := r.PostFormValue("secret")
+	if !(token == TaoBaoSign(&r.PostForm, secret)) {
+		w.Write([]byte(lib.Errors.Get("001", "sign error").String()))
+		return false
+	}
+	return true
+}
 
 func Sortedstr(sets *url.Values, sep1 string, sep2 string, skip string) string {
 	mk := make([]string, len(*sets))

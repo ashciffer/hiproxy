@@ -4,34 +4,9 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"time"
-
-	"git.ishopex.cn/matrix/kaola/lib"
-
-	"github.com/gin-gonic/gin"
 )
-
-func CheckProxySign() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !CheckSign(c.Writer, c.Request) {
-			c.Abort()
-			return
-		}
-	}
-}
-
-func CheckSign(w http.ResponseWriter, r *http.Request) bool {
-	r.ParseForm()
-	token := r.PostFormValue("sign")
-
-	if !(token == TaoBaoSign(&r.PostForm, "")) {
-		w.Write([]byte(lib.Errors.Get("001", "sign error").String()))
-		return false
-	}
-	return true
-}
 
 func TaoBaoSign(form *url.Values, secret string) string {
 	signstr := secret + Sortedstr(form, "", "", "sign")
