@@ -9,8 +9,8 @@ import (
 
 	"git.ishopex.cn/teegon/hiproxy/controllers"
 	. "git.ishopex.cn/teegon/hiproxy/models"
-	"github.com/astaxie/beego"
 	"github.com/gin-gonic/gin"
+	"github.com/go-ini/ini"
 )
 
 var hp *controllers.HiProxy
@@ -52,12 +52,18 @@ func main() {
 	T.Debug("Starting. Date:%s", time.Now().Local().String())
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	backendurl := beego.AppConfig.String("app::backendurl")
-	hp.TeegonSecret = beego.AppConfig.String("app::secret")
-	dns := beego.AppConfig.String("app::dns")
-	err := hp.Init(backendurl, dns)
+
+	cfg, err := ini.LooseLoad("conf/app.conf", "")
 	if err != nil {
-		fmt.Printf("hp init :%s", err)
+		fmt.Println("hiproxy conf init failed:%s", err)
+		os.Exit(-1)
+	}
+
+	backendurl := cfg.Section("app").Key("backendurl").String()
+	dns := cfg.Section("app").Key("dns").String()
+	err = hp.Init(backendurl, dns)
+	if err != nil {
+		fmt.Printf("hiprpxy init :%s \n", err)
 		os.Exit(-1)
 		return
 	}

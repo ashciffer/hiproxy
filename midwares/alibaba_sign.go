@@ -1,11 +1,11 @@
 package midwares
 
 import (
-	"crypto/sha1"
 	"crypto/hmac"
+	"crypto/sha1"
 	"fmt"
-	"strings"
 	"net/url"
+	"strings"
 )
 
 func AlibabaSign(form *url.Values, secret string, auth_message interface{}) string {
@@ -27,7 +27,6 @@ func AlibabaSign(form *url.Values, secret string, auth_message interface{}) stri
 	mac.Write([]byte(signstr))
 	return strings.ToUpper(fmt.Sprintf("%x", mac.Sum(nil)))
 }
-
 
 func AddAlibabaSystemParams(from *url.Values, method string, auth_message interface{}) {
 	from.Add("method", method)

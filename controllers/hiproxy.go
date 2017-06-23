@@ -243,15 +243,9 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				T.Error("proxy failed,error:%s", err)
 				c.JSON(200, lib.Errors.Get("500", err))
 			} else {
-				// var res map[string]interface{}
-				// json.Unmarshal(b, &res)
-				// if _, ok := res["error_response"]; ok {
-				// T.Error("platfrom return error resopnse ,error :%s", string(b))
-				// h.QueryNodeAuthMessage(apistat.NodeID, platform_type, node_id)
-				// } else {
-				//c.JSON(200, obj interface{})
+
 				T.Info("proxy success，result:%s", string(b))
-				// }
+
 				c.JSON(200, string(b))
 			}
 		} else {
