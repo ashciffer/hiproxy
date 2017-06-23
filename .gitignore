@@ -2,6 +2,7 @@
 .idea/*
 *.iml
 *.log
+vendor/*
 hiproxy2.iml
 logs/*.log
 */log/*-pid

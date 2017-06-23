@@ -1,0 +1,13 @@
+package: git.ishopex.cn/teegon/hiproxy
+import:
+- package: github.com/astaxie/beego
+  version: v1.7.2
+  subpackages:
+  - logs
+- package: github.com/gin-gonic/gin
+  version: v1.1.4
+- package: github.com/go-sql-driver/mysql
+  version: v1.3
+- package: gopkg.in/mgo.v2
+  subpackages:
+  - bson
