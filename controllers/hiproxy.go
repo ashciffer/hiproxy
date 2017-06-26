@@ -160,8 +160,6 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 		//TODO from_node_id h
 		//判断是否有调用权限
 		if apistat, ok = h.AppInfo[appkey]; !ok {
-			T.Error("appinfo :%v", h.AppInfo)
-			T.Debug("apistat :%s", appkey)
 			c.JSON(200, lib.Errors["002"])
 			return
 		}
@@ -214,16 +212,15 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 			}
 
 			u.Del("params")
-			//u.Add("app_key", auth_message.(map[string]interface{})["from_api_key"].(string))
 			auth_secret := auth_message.(map[string]interface{})["from_api_secret"].(string)
 			u.Add("secret", auth_secret)
 			u.Add("session", auth_message.(map[string]interface{})["from_auth_code"].(string))
 			pu := auth_message.(map[string]interface{})["from_api_url"].(string)
-			// puu, err := url.Parse(pu)
-			// if err != nil {
-			// 	c.Writer.Write([]byte(err.Error()))
-			// 	return
-			// }
+			puu, err := url.Parse(pu)
+			if err != nil {
+				c.JSON(400, err.Error())
+				return
+			}
 			h.AddPlatformParams(&u, platform_type, method, auth_message.(map[string]interface{})["from_api_key"].(string), auth_message)
 
 			if platform_type == "taobao" {
@@ -233,12 +230,9 @@ func (h *HiProxy) ReverseFromT2P() gin.HandlerFunc {
 				pu += "/param2/1/com.alibaba.product/alibaba.product.getList/1004526"
 			}
 
-			//puu.RawQuery = u.Encode()
-			// c.Request.Header.Set("Content-Length", strconv.Itoa(len(u.Encode())))
-			// c.Request.Body = ioutil.NopCloser(strings.NewReader(u.Encode()))
 			T.Debug("url %s \t params :%s", pu, u.Encode())
-			b, err = lib.Request(pu, "POST", u.Encode())
-			//	b, err = newReverseProxy(puu).ServeHTTP(c.Writer, c.Request)
+			// b, err = lib.Request(pu, "POST", u.Encode())
+			b, err = newReverseProxy(puu).Proxy(c.Writer, c.Request, pu, &u)
 			if err != nil {
 				T.Error("proxy failed,error:%s", err)
 				c.JSON(200, lib.Errors.Get("500", err))

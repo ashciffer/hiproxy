@@ -8,6 +8,7 @@ package lib
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -203,6 +204,7 @@ func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) ([]b
 		}
 	}
 
+	fmt.Printf("outreq 2 :%s \n", outreq.URL.RawQuery)
 	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
 		// If we aren't the first proxy retain prior
 		// X-Forwarded-For information as a comma+space
@@ -255,6 +257,26 @@ func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) ([]b
 	res.Body.Close() // close now, instead of defer, to populate res.Trailer
 	copyHeader(rw.Header(), res.Trailer)
 	return b, nil
+}
+
+func (p *ReverseProxy) Proxy(rw http.ResponseWriter, old *http.Request, newURL string, newParams *url.Values) ([]byte, error) {
+	var (
+		backendurl *http.Request
+		err        error
+	)
+	backendurl, err = http.NewRequest(old.Method, newURL, strings.NewReader(newParams.Encode()))
+	if err != nil {
+		return nil, err
+	}
+
+	backendurl.Form = *newParams
+	backendurl.MultipartForm = old.MultipartForm
+	backendurl.PostForm = *newParams
+	backendurl.URL.RawQuery = old.URL.RawQuery
+	backendurl.Header = old.Header
+
+	backendurl.ParseForm()
+	return p.ServeHTTP(rw, backendurl)
 }
 
 func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {

@@ -23,4 +23,5 @@ func router(c *gin.Engine) {
 
 	// c.GET("/hiproxy", hp.ReverseFromT2P())
 	c.POST("/hiproxy", hp.ReverseFromT2P())
+	c.POST("/hiproxy/test", hp.TestProxy())
 }
